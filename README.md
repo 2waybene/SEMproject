@@ -12,5 +12,8 @@ http://www.stat.purdue.edu/~bacraig/SCS/
 
 I like this USGS help doc by Jim Grace the most: https://www.nwrc.usgs.gov/SEM/
 
+Jarrett E.K. Byrnes posted details slides for the workshop at http://jarrettbyrnes.info/ubc_sem/ , there are slides, examples etc. Very useful
 
+There is a specific website focusing on lavaan package, very thorough. http://www.structuralequations.org/
 
+ 
