@@ -1,0 +1,253 @@
+---
+title: 'This is an analysis note of the association analysis for Dr. Steven Kleeberger '
+author: 'Jianying Li'
+date: 'March 9th, 2018'
+params:
+  #corCol: covariate
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+
+# Introduction
+This excercise is to document how one can use R to perform logistic regressiona and further extract important estimates, as well as computing the odds ratios and construct the confident inveral for the odds ratios.
+
+ Author: Jianying Li
+Purpose: to analyze the association of the genetic effect of
+     a functional/coding SNP "rs2257167" on the disease
+         phenotypes (severe vs. mild), and generate odds
+         ratio and confident interval 
+
+
+
+
+## Association analysis on disease severity against GoldenGate SNP panels with several potentional covariates.
+
+In this analysis, we tested three hypotheses each with different genetic assumptions (genetic mode): case I, II, and III. All the analyses will be done with each case respectively. Here, we are assuming that allele "A" is the reference and "B" isthe variant (rs2257167). Here are those three cases as following:
+
+
+
+```{r table-simple, echo=FALSE, message=FALSE, warnings=FALSE, results='asis'}
+suppressWarnings(require(pander))
+panderOptions('table.split.table', Inf)
+set.caption("Genotype case I")
+my.data <- "
+  Disease-level |   AA  |   AB    |   BB   
+  Severe        | SNPCnt| SNPCnt  | SNPCnt  
+  Mild          | SNPCnt| SNPCnt  | SNPCnt 
+  "
+df <- read.delim(textConnection(my.data),header=FALSE,sep="|",strip.white=TRUE,stringsAsFactors=FALSE)
+names(df) <- unname(as.list(df[1,])) # put headers on
+df <- df[-1,] # remove first row
+row.names(df)<-NULL
+pander(df, style = 'rmarkdown')
+
+panderOptions('table.split.table', Inf)
+set.caption("Genotype case II")
+my.data <- "
+  Disease-level |   AA  |   AB/BB    
+  Severe        | SNPCnt| SNPCnt    
+  Mild          | SNPCnt| SNPCnt   
+  "
+df <- read.delim(textConnection(my.data),header=FALSE,sep="|",strip.white=TRUE,stringsAsFactors=FALSE)
+names(df) <- unname(as.list(df[1,])) # put headers on
+df <- df[-1,] # remove first row
+row.names(df)<-NULL
+pander(df, style = 'rmarkdown')
+
+panderOptions('table.split.table', Inf)
+set.caption("Genotype case III")
+my.data <- "
+  Disease-level |   AA/AB |   BB       
+  Severe        | SNPCnt  | SNPCnt    
+  Mild          | SNPCnt  | SNPCnt   
+  "
+df <- read.delim(textConnection(my.data),header=FALSE,sep="|",strip.white=TRUE,stringsAsFactors=FALSE)
+names(df) <- unname(as.list(df[1,])) # put headers on
+df <- df[-1,] # remove first row
+row.names(df)<-NULL
+pander(df, style = 'rmarkdown')
+
+```
+
+## With the proposed three cases:
+### Case I:  AA, AB, BB. With all three genotypes captured, we are testing the additive genetic effect.
+### Case II:  AA, AB/BB. With collapsing any genotype with "B" allele, we are testing the dominate effect from the variant allele.
+### Case III: AA/AB, BB. With collapsing any genotype with "A" allele, we are testing the recessive effect from the variant allele.
+
+In this study, we have recruited 748 infants with lung disease clinically diagnosed as "severe" or "mild". The infants were tested for RSV infection when administered. This research focuses on the disease status as our major outcome with the infants tested for RSV positive, the question is whether such a coding SNP (rs2257167) is associated with the disease outcome. The ultimate question behind this research is when the kid is infected with RSV and further develops the lung disease, what is the effect their genetic background on their clinical symptom. In addition to the clinical diagnosis, we also collected other information, i.e. gender, social economic status etc. Those factors were each tested in the model as a covariate. Therefore, we are able to address the hidden impact from other covariates that could interact and affect their clinical symptom.
+
+# Accessing the minor allele frequency in this population
+
+## Getting the data
+```{r echo=FALSE, message=FALSE, warnings=FALSE, results='asis'}
+
+#setwd ("x:/project2018/RSV_association_study/study_with_IFNAR1/")
+
+##=========================================
+##  Prepare the association analysis data
+##=========================================
+
+load("SNP_file_BPIIFA1_to_MYD88.rda")
+load("clinic_dt.rda")
+
+SNP_ifnar1 = "seq.rs2257167"
+column2use = which(colnames(sheetIN) %in% SNP_ifnar1)
+snp.name = SNP_ifnar1
+SAT_phenotype_col =  6
+
+
+
+#snp.name <- colnames(sheetIN)[column2use]
+#snp.name
+
+geno.pheno <- cbind(sheetIN[,column2use], dt[,SAT_phenotype_col])
+geno.pheno <- as.data.frame(geno.pheno)
+
+##==================================================
+##  This is VERY important that for now we HAVE TO 
+##  flip the genotype coding! 
+##  Genotyp coding scema:
+##                0 : homozygous reference allele
+##                1 : heterozygous ref/SNP
+##                2 : homozygous variant allele
+##==================================================
+geno.pheno[,1] <-  abs (geno.pheno[,1] - 2)
+ 
+#table (geno.pheno[,1])
+#0   1   2 
+#396 286  55 
+
+##====================================================
+##  OKAY, from now on, we can proceed with the study
+##====================================================
+colnames(geno.pheno) <- c ("SNP", "SAT")
+rownames(geno.pheno) <- dt$RSV.ID
+
+##  Here, we are looking at all the SNP 
+##  regardless of RSV infection status
+data_all <- geno.pheno
+#str(dt$RSV.ID)
+#str(geno.pheno)
+
+
+##  ONLY use RSV positive for the following analyses!!
+row2use <-  which(dt$RSV == 1)
+geno.pheno <- geno.pheno [row2use ,]
+cov.dt <- dt[row2use ,] 
+
+##  Exclude individual with missing SNP information
+if (length(which(is.na(geno.pheno[,1]))) > 0) {
+  missing.row = which(is.na(geno.pheno[,1]))
+  geno.pheno <-  geno.pheno[-missing.row,]
+  cov.dt <- cov.dt[-missing.row ,] 
+}
+
+#str(geno.pheno)
+#str(cov.dt)
+
+```
+
+## Allele frequeny table
+
+```{r MAF-table, echo=FALSE, message=FALSE, warnings=FALSE, results='asis'}
+suppressWarnings(require(pander))
+panderOptions('table.split.table', Inf)
+
+
+
+# 1 For all SNP/indivudual
+
+d1 <- as.data.frame(table (data_all[,1]))
+REFF <- (d1$Freq[1]*2 + d1$Freq[2])/(sum(d1$Freq)*2)
+VARF <- (d1$Freq[3]*2 + d1$Freq[2])/(sum(d1$Freq)*2)
+
+case.1 <- c(REFF , VARF )
+
+
+# 2 SNP from indivudual with RSV positive
+
+d2 <- as.data.frame(table (geno.pheno[,1]))
+REFF2 <- (d2$Freq[1]*2 + d2$Freq[2])/(sum(d2$Freq)*2)
+VARF2 <- (d2$Freq[3]*2 + d2$Freq[2])/(sum(d2$Freq)*2)
+
+case.2 <- c(REFF2 , VARF2 )
+
+snp.freq <- as.data.frame (rbind (case.1, case.2))
+colnames (snp.freq) <- c("Reference allele (G) frequency", "Variant allele (C) frequency")
+rownames (snp.freq) <- c("ALL individual", "Individual with RSV positive")
+#snp.freq
+
+set.caption("Minor allele frequency -- rs2257167")
+my.data <- "
+                              |   Reference allele (G) frequency  |   Variant allele (C) frequency  
+  ALL individuals             |   0.7313433  |   0.2686567   
+  Individual with RSV positive|   0.7319202  |   0.2680798 
+  "
+df <- read.delim(textConnection(my.data),header=FALSE,sep="|",strip.white=TRUE,stringsAsFactors=FALSE)
+names(df) <- unname(as.list(df[1,])) # put headers on
+df <- df[-1,] # remove first row
+row.names(df)<-NULL
+pander(df, style = 'rmarkdown')
+```
+
+# Logistic regression analysis on three cases without covariate
+
+##  Case I
+```{r case-1, echo=FALSE, message=TRUE, warnings=FALSE, results='asis'}
+#table(geno.pheno)
+
+#table(geno.pheno[,1])
+#   0   1   2 
+# 219 149  33 
+
+##  So, there are more reference genotypes than SNP genotypes
+
+##  If we code it as numeric -- trend test
+m <- as.data.frame(geno.pheno)
+summary(glm(m[,2] ~ m[,1], family=binomial("logit")))
+
+##  m[, 1]       -0.5037     0.1598  -3.153  0.00162 ** 
+##  It reports that there is "additive effect" from the p-value
+
+
+##  If we code it as factor
+summary(glm(m[,2] ~ as.factor(m[,1]), family=binomial("logit")))
+
+# as.factor(m[, 1])1  -0.3757     0.2178  -1.725  0.08456 .  
+# as.factor(m[, 1])2  -1.1917     0.3887  -3.066  0.00217 ** 
+
+##  Both genotypes were also signficant comparing to 
+##  "0" phenotype -- reference in our case
+##  and, the overall trend (from first model) matches with our 
+##  independent two factors: -0.3757 & -1.1917
+
+##  Temporary conclusion is that the variant alleles is NEGATIVELy 
+##  associated with the disease outcome. In other words, it has 
+##  adverse effect on the disease outcome
+
+
+```
+
+
+##  Case II
+```{r case-2, echo=FALSE, message=FALSE, warnings=FALSE, results='asis'}
+
+```
+
+
+##  Case III
+```{r case-3, echo=FALSE, message=FALSE, warnings=FALSE, results='asis'}
+
+```
+
+
+# Logistic regression analysis on three cases with covariate
+##  Analysis with covariates: gender
+##  Analysis with covariates: region
+##  Analysis with covariates: breastfeeding
+##  Analysis with covariates: social-status

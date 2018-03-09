@@ -222,6 +222,7 @@ m2.logistic= glm(m2[,2] ~ m2[,1], family=binomial("logit"))
 m2.logistic= glm(m2[,2] ~ as.factor(m2[,1]), family=binomial("logit"))
 
 summary(glm(m2[,2] ~ m2[,1], family=binomial("logit")))
+summary(glm(m2[,2] ~ 1 , family=binomial("logit")))
 
 summary(glm(m2[,2] ~ as.factor(m2[,1]), family=binomial("logit")))
 ##  as.factor(m2[, 1])1  -0.5221     0.2054  -2.542    0.011 *  
@@ -239,23 +240,30 @@ exp(summary(m2.logistic)$coefficients[2,1] +  qnorm(c(0.025,0.5,0.975)) *summary
 ##  CI (95) : [0.3966436 , 0.8873607]
 
 
+##  This is a little bit convoluted in explaining this results. First of all, for the outcome severity: 1 means server, 0 means mild.
+##  The predictor variable, genotype: 1 means involving variant allel "B", 0 means reference allele "A"
+
+##  So, the odds ratio (@ OR: 0.5932672) means with the genotype involving variant allele, it decreases the serverity event (vss mild). 
+##  therefore, should be explained as "protective effect".
 
 ##=========================================================
 ##  Now, we are collapsing the heterozygous genotypes
 ##  And testing the dominant/recessive effects
 ##  Dominate effect from the variant (Case II: AA/AB /BB)
-##  
 ##=========================================================
+
 table(geno.pheno[,1])
 #   0   1   2 
 # 219 149  33 
 
-# case 2
-##     AA  |   AB/BB 
-##    collapse 1 and 2 to 1
+# case 3
+##     AA/AB  |   BB 
+##    collapse 1 to 0
+##    collapse 2 to 1
 
 m3 <- as.data.frame(geno.pheno)
 m3[which(m3[,1] == 1),1] = 0
+m3[which(m3[,1] == 2),1] = 1
 
 table (m3[,1])
 # 0   1 
@@ -278,6 +286,10 @@ exp(summary(m3.logistic)$coefficients[2,1] +  qnorm(c(0.025,0.5,0.975)) *summary
 ##  OR: 0.3549402
 ##  CI (95) : [0.1693910 , 0.7437384]
 
+##  So, the odds ratio (@ OR: 0.3549402) means with the genotype involving variant allele, it decreases the serverity event (vss mild). 
+##  therefore, should be explained as "protective effect".
+
+
 ##==========================================================================
 ##  Analysis with covariates: gender, region, breastfeeding, social-status
 ##==========================================================================
@@ -295,29 +307,49 @@ table(m3)
 m.gender <- cbind (m, cov.dt$GENDER)
 colnames(m.gender) <- c (colnames(m), "Gender")
 summary(glm(SAT ~ SNP + Gender, data = m.gender, family=binomial("logit")))
+logit <- glm(SAT ~ SNP + Gender, data = m.gender, family=binomial("logit"))
+exp(summary(logit)$coefficients[2,1] +  qnorm(c(0.025,0.5,0.975)) *summary(logit)$coefficients[2,2])
+
 
 m2.gender <- cbind (m2, cov.dt$GENDER)
 colnames(m2.gender) <- c (colnames(m), "Gender")
 summary(glm(SAT ~ as.factor(SNP) + Gender, data = m2.gender, family=binomial("logit")))
+logit <- glm(SAT ~ as.factor(SNP) + Gender, data = m2.gender, family=binomial("logit"))
+exp(summary(logit)$coefficients[2,1] +  qnorm(c(0.025,0.5,0.975)) *summary(logit)$coefficients[2,2])
 
-m3.gender <- cbind (m, cov.dt$GENDER)
+
+m3.gender <- cbind (m3, cov.dt$GENDER)
 colnames(m3.gender) <- c (colnames(m), "Gender")
 summary(glm(SAT ~ as.factor(SNP) + Gender, data = m3.gender, family=binomial("logit")))
+logit <- glm(SAT ~ as.factor(SNP) + Gender, data = m3.gender, family=binomial("logit"))
+exp(summary(logit)$coefficients[2,1] +  qnorm(c(0.025,0.5,0.975)) *summary(logit)$coefficients[2,2])
+
 
 ##==========================================================================
 ##  Analysis with covariates: region
 ##==========================================================================
 m.Region <- cbind (m, cov.dt$REGION)
 colnames(m.Region) <- c (colnames(m), "Region")
-summary(glm(SAT ~ SNP + Region, data = m.Region, family=binomial("logit")))
+summary(glm(SAT ~ SNP + as.factor(Region), data = m.Region, family=binomial("logit")))
+logit <- glm(SAT ~ SNP + as.factor(Region),data = m.Region, family=binomial("logit"))
+exp(summary(logit)$coefficients[2,1] +  qnorm(c(0.025,0.5,0.975)) *summary(logit)$coefficients[2,2])
 
-m2.Region <- cbind (m, cov.dt$REGION)
+
+
+m2.Region <- cbind (m2, cov.dt$REGION)
 colnames(m2.Region) <- c (colnames(m), "Region")
-summary(glm(SAT ~ as.factor(SNP) + Region, data = m2.Region, family=binomial("logit")))
+summary(glm(SAT ~ as.factor(SNP) + as.factor(Region), data = m2.Region, family=binomial("logit")))
+logit <- glm(SAT ~ as.factor(SNP) + as.factor(Region), data = m2.Region, family=binomial("logit"))
+exp(summary(logit)$coefficients[2,1] +  qnorm(c(0.025,0.5,0.975)) *summary(logit)$coefficients[2,2])
 
-m3.Region <- cbind (m, cov.dt$REGION)
+
+
+m3.Region <- cbind (m3, cov.dt$REGION)
 colnames(m3.Region) <- c (colnames(m), "Region")
-summary(glm(SAT ~ as.factor(SNP) + Region, data = m3.Region, family=binomial("logit")))
+summary(glm(SAT ~ as.factor(SNP) + as.factor(Region), data = m3.Region, family=binomial("logit")))
+logit <- glm(SAT ~ as.factor(SNP) + as.factor(Region), data = m3.Region, family=binomial("logit"))
+exp(summary(logit)$coefficients[2,1] +  qnorm(c(0.025,0.5,0.975)) *summary(logit)$coefficients[2,2])
+
 
 ##==========================================================================
 ##  Analysis with covariates: breastfeeding
@@ -325,14 +357,24 @@ summary(glm(SAT ~ as.factor(SNP) + Region, data = m3.Region, family=binomial("lo
 m.Breastfeeding <- cbind (m, cov.dt$Breastfeeding)
 colnames(m.Breastfeeding) <- c (colnames(m), "Breastfeeding")
 summary(glm(SAT ~ SNP + Breastfeeding, data = m.Breastfeeding, family=binomial("logit")))
+logit <- glm(SAT ~ SNP + Breastfeeding, data = m.Breastfeeding, family=binomial("logit"))
+exp(summary(logit)$coefficients[2,1] +  qnorm(c(0.025,0.5,0.975)) *summary(logit)$coefficients[2,2])
 
-m2.Breastfeeding <- cbind (m, cov.dt$Breastfeeding)
+
+m2.Breastfeeding <- cbind (m2, cov.dt$Breastfeeding)
 colnames(m2.Breastfeeding) <- c (colnames(m), "Breastfeeding")
 summary(glm(SAT ~ as.factor(SNP) + Breastfeeding, data = m2.Breastfeeding, family=binomial("logit")))
+logit <- glm(SAT ~ as.factor(SNP) + Breastfeeding, data = m2.Breastfeeding, family=binomial("logit"))
+exp(summary(logit)$coefficients[2,1] +  qnorm(c(0.025,0.5,0.975)) *summary(logit)$coefficients[2,2])
 
-m3.Breastfeeding <- cbind (m, cov.dt$Breastfeeding)
+
+m3.Breastfeeding <- cbind (m3, cov.dt$Breastfeeding)
 colnames(m3.Breastfeeding) <- c (colnames(m), "Breastfeeding")
 summary(glm(SAT ~ as.factor(SNP) + Breastfeeding, data = m3.Breastfeeding, family=binomial("logit")))
+logit <- glm(SAT ~ as.factor(SNP) + Breastfeeding, data = m3.Breastfeeding, family=binomial("logit"))
+exp(summary(logit)$coefficients[2,1] +  qnorm(c(0.025,0.5,0.975)) *summary(logit)$coefficients[2,2])
+
+
 
 ##==========================================================================
 ##  Analysis with covariates: social-status
@@ -340,14 +382,23 @@ summary(glm(SAT ~ as.factor(SNP) + Breastfeeding, data = m3.Breastfeeding, famil
 m.SES<- cbind (m, cov.dt$SES)
 colnames(m.SES) <- c (colnames(m), "SES")
 summary(glm(SAT ~ SNP + SES, data = m.SES, family=binomial("logit")))
+logit <- glm(SAT ~ SNP + SES, data = m.SES, family=binomial("logit"))
+exp(summary(logit)$coefficients[2,1] +  qnorm(c(0.025,0.5,0.975)) *summary(logit)$coefficients[2,2])
 
-m2.SES<- cbind (m, cov.dt$SES)
+
+
+m2.SES<- cbind (m2, cov.dt$SES)
 colnames(m2.SES) <- c (colnames(m), "SES")
 summary(glm(SAT ~ as.factor(SNP) + SES, data = m2.SES, family=binomial("logit")))
+logit <- glm(SAT ~ as.factor(SNP) + SES, data = m2.SES, family=binomial("logit"))
+exp(summary(logit)$coefficients[2,1] +  qnorm(c(0.025,0.5,0.975)) *summary(logit)$coefficients[2,2])
 
-m3.SES<- cbind (m, cov.dt$SES)
+
+m3.SES<- cbind (m3, cov.dt$SES)
 colnames(m3.SES) <- c (colnames(m), "SES")
 summary(glm(SAT ~ as.factor(SNP) + SES, data = m3.SES, family=binomial("logit")))
+logit <- glm(SAT ~ as.factor(SNP) + SES, data = m3.SES, family=binomial("logit"))
+exp(summary(logit)$coefficients[2,1] +  qnorm(c(0.025,0.5,0.975)) *summary(logit)$coefficients[2,2])
 
 
 
