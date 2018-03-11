@@ -192,6 +192,10 @@ multiCA.test(counts)
 multiCA.test(t(counts))
 
 ##  With the same test statistics, the p-value = 0.00143
+
+##  Same as the chi-square test with 1 degree of freedom
+##  1-pchisq(10.167, df=1)
+##  [1] 0.001429767
 ##  This is closer to our logistic regression pvalue: 0.00162
 
 ##=================================
@@ -210,6 +214,7 @@ table(geno.pheno[,1])
 # case 2
 ##     AA  |   AB/BB 
 ##    collapse 1 and 2 to 1
+##    leave the reference homozygous genotype coded as "0"
 
 m2 <- as.data.frame(geno.pheno)
 m2[which(m2[,1] == 2),1] = 1
