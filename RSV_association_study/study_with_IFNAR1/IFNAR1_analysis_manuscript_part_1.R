@@ -33,6 +33,7 @@
 ##=========================================================================
 setwd ("x:/project2018/RSV_association_study/study_with_IFNAR1/")
 source ("analysisFuncs.R")
+source("ROCandHL.R")
 
 
 ##=========================================
@@ -307,7 +308,12 @@ table(m3)
 m.gender <- cbind (m, cov.dt$GENDER)
 colnames(m.gender) <- c (colnames(m), "Gender")
 summary(glm(SAT ~ SNP + Gender, data = m.gender, family=binomial("logit")))
-logit <- glm(SAT ~ SNP + Gender, data = m.gender, family=binomial("logit"))
+logit.gender <- glm(SAT ~ SNP + Gender, data = m.gender, family=binomial("logit"))
+logit.reduced <- glm(SAT ~ SNP , data = m.gender, family=binomial("logit"))
+
+summary(logit.gender)
+summary(logit.reduced)
+
 exp(summary(logit)$coefficients[2,1] +  qnorm(c(0.025,0.5,0.975)) *summary(logit)$coefficients[2,2])
 
 
