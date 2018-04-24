@@ -59,23 +59,31 @@ colnames(NewDT)
 
 save (list(newDT = NewDT, cellDT = CellReportDT), file = "parsedDT.rda")
 
-save (NewDT, file = "parsedNewDT.rda")
-save ( CellReportDT, file = "parsedCellReportDT.rda")
+#save (NewDT, file = "parsedNewDT.rda")
+#save ( CellReportDT, file = "parsedCellReportDT.rda")
 
+##=============================
+##  Going forward
+##============================
 
-
+setwd("/Users/li11/myGit/SEMproject/meeting_04242018/")
 load("parsedNewDT.rda")
+dim(NewDT)
+colnames(NewDT)
+
+load ("parsedCellReportDT.rda")
+head(CellReportDT)
 ##=============================
 ##  Do something here
 ##==============================
 
-as.dist(cor(k.dat[,c(1:3)])) 
-# Examine contents of keeley data file
-names(k.dat)
-head(k.dat)
 
-cor.test(k.dat$GATA2_lev, k.dat$PGR_lev)
-cor.test(k.dat$GATA2_act, k.dat$PGR_act)
+
+colnames(NewDT)
+colnames(CellReportDT)
+
+cor.test(CellReportDT$GATA2_lev, CellReportDT$PGR_lev)
+cor.test(CellReportDT$GATA2_act, CellReportDT$PGR_act)
 
 ###Load Libraries
 library(lavaan)
@@ -91,13 +99,13 @@ library(lavaan)
 mod1 <- 'SOX17_lev ~ GATA2_lev + PGR_lev'
 
 # Fit the model (i.e. est. parameters)
-mod1.fit <- sem(mod1, data=k.dat)
+mod1.fit <- sem(mod1, data=CellReportDT)
 
 # Output a summary of the computed results
 summary(mod1.fit, rsq=T)  # rsq=T means output the r-sqr
 
-source("x:/R-project/customPackages/plotTools.R")
-(xb <- rcorr(as.matrix(k.dat[,c(1:3)]))) 
+#source("x:/R-project/customPackages/plotTools.R")
+#(xb <- rcorr(as.matrix(CellReportDT[,c(1:3)]))) 
 
 ########################################################
 
@@ -108,19 +116,19 @@ source("x:/R-project/customPackages/plotTools.R")
 ##  Figure 6E
 ##  p4_act ~ GATA2_lev + PGR_lev
 ##=====================================
-names(k.dat)
+colnames(CellReportDT)
 
 # Write lavaan code for this single equation model
 mod1 <- 'P4_act ~ GATA2_lev + PGR_lev'
 
 # Fit the model (i.e. est. parameters)
-mod1.fit <- sem(mod1, data=k.dat)
+mod1.fit <- sem(mod1, data=CellReportDT)
 
 # Output a summary of the computed results
 summary(mod1.fit, rsq=T)  # rsq=T means output the r-sqr
 
-source("x:/R-project/customPackages/plotTools.R")
-(xb <- rcorr(as.matrix(k.dat[,c(1:2,6)]))) 
+#source("x:/R-project/customPackages/plotTools.R")
+#(xb <- rcorr(as.matrix(CellReportDT[,c(1:2,6)]))) 
 
 
 
@@ -128,40 +136,153 @@ source("x:/R-project/customPackages/plotTools.R")
 ##  Figure 6D
 ##  SOX17_lev  ~ GATA2_act + PGR_act
 ##=====================================
-names(k.dat)
+colnames(CellReportDT)
 
 # Write lavaan code for this single equation model
 mod1 <- 'SOX17_lev  ~ GATA2_act + PGR_act'
 
 # Fit the model (i.e. est. parameters)
-mod1.fit <- sem(mod1, data=k.dat)
+mod1.fit <- sem(mod1, data=CellReportDT)
 
 # Output a summary of the computed results
 summary(mod1.fit, rsq=T)  # rsq=T means output the r-sqr
 
-source("x:/R-project/customPackages/plotTools.R")
-(xb <- rcorr(as.matrix(k.dat[,c(3,4,5)]))) 
+#source("x:/R-project/customPackages/plotTools.R")
+#(xb <- rcorr(as.matrix(CellReportDT[,c(3,4,5)]))) 
 
 
 ##======================================
 ##  p4_act ~ GATA2_act + PGR_act
 ##  NOT shown in the paper
 ##=====================================
-names(k.dat)
+colnames(CellReportDT)
 
 # Write lavaan code for this single equation model
 mod1 <- 'P4_act ~ GATA2_act + PGR_act'
 
 # Fit the model (i.e. est. parameters)
-mod1.fit <- sem(mod1, data=k.dat)
+mod1.fit <- sem(mod1, data=CellReportDT)
 
 # Output a summary of the computed results
 summary(mod1.fit, rsq=T)  # rsq=T means output the r-sqr
 
-source("x:/R-project/customPackages/plotTools.R")
-(xb <- rcorr(as.matrix(k.dat[,c(4:6)]))) 
+#source("x:/R-project/customPackages/plotTools.R")
+#(xb <- rcorr(as.matrix(CellReportDT[,c(4:6)]))) 
+
+
+##=====================================================
+##  Select genes that are highly associated with 
+##  GATA2
+##=====================================================
+dim(NewDT)
+colnames(NewDT)
+head(CellReportDT)
+
+results.final <- NULL
+
+for (k in 1:dim(NewDT)[2])
+{
+  tempTest <- cor.test (CellReportDT$GATA2, NewDT[,k])
+  #if (tempTest$p.value < 0.05){
+    result <- list (gene = colnames(NewDT)[k], pval = tempTest$p.value)
+  #}
+  if (k == 1){
+    results.final <- unlist(result)
+  }else{
+    results.final <- rbind (results.final,unlist(result))
+  }
+}
+
+corr.w.GATA2 <- results.final[order(as.numeric(results.final[,2])),]
+
+X = -log(as.numeric(corr.w.GATA2[,2]))
+hist(X, prob=TRUE, main = "Correlation to GATA2 level", xlab = "Negative logPval",col="grey")# prob=TRUE for probabilities not counts
+lines(density(X), col="blue", lwd=2) # add a density estimate with defaults
 
 
 
 
+##=====================================================
+##  Select genes that are highly associated with 
+##  PGR
+##=====================================================
+dim(NewDT)
+colnames(NewDT)
+head(CellReportDT)
 
+results.final <- NULL
+
+for (k in 1:dim(NewDT)[2])
+{
+  tempTest <- cor.test (CellReportDT$PGR, NewDT[,k])
+  #if (tempTest$p.value < 0.05){
+  result <- list (gene = colnames(NewDT)[k], pval = tempTest$p.value)
+  #}
+  if (k == 1){
+    results.final <- unlist(result)
+  }else{
+    results.final <- rbind (results.final,unlist(result))
+  }
+}
+
+corr.w.PGR <- results.final[order(as.numeric(results.final[,2])),]
+
+X = -log(as.numeric(corr.w.PGR[,2]))
+hist(X, prob=TRUE, main = "Correlation to PGR level", xlab = "Negative logPval",col="grey")# prob=TRUE for probabilities not counts
+lines(density(X), col="blue", lwd=2) # add a density estimate with defaults
+
+
+
+##=====================================================
+##  Select genes that are highly associated with 
+##  SOX17
+##=====================================================
+dim(NewDT)
+colnames(NewDT)
+head(CellReportDT)
+
+results.final <- NULL
+
+for (k in 1:dim(NewDT)[2])
+{
+  tempTest <- cor.test (CellReportDT$SOX17, NewDT[,k])
+  #if (tempTest$p.value < 0.05){
+  result <- list (gene = colnames(NewDT)[k], pval = tempTest$p.value)
+  #}
+  if (k == 1){
+    results.final <- unlist(result)
+  }else{
+    results.final <- rbind (results.final,unlist(result))
+  }
+}
+
+corr.w.SOX17 <- results.final[order(as.numeric(results.final[,2])),]
+
+X = -log(as.numeric(corr.w.SOX17[,2]))
+hist(X, prob=TRUE, main = "Correlation to SOX17 level", xlab = "Negative logPval",col="grey")# prob=TRUE for probabilities not counts
+lines(density(X), col="blue", lwd=2) # add a density estimate with defaults
+
+
+##================
+##  Test model
+##=================
+
+d.model <- cbind(CellReportDT, NewDT$TACC3)
+colnames(d.model)[10] <- "TACC3"
+
+d.model <- cbind(CellReportDT, NewDT$MSX1)
+colnames(d.model)[10] <- "MSX1"
+
+# Write lavaan code for this single equation model
+mod1 <- 'TACC3  ~ GATA2_act + PGR_act'
+mod1 <- 'TACC3  ~ GATA2_lev + PGR_lev'
+
+
+mod1 <- 'MSX1  ~ GATA2_act + PGR_act'
+mod1 <- 'MSX1  ~ GATA2_lev + PGR_lev'
+
+# Fit the model (i.e. est. parameters)
+mod1.fit <- sem(mod1, data=d.model)
+
+# Output a summary of the computed results
+summary(mod1.fit, rsq=T)  # rsq=T means output the r-sqr
